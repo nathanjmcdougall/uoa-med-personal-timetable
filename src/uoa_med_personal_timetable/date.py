@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 
 
 def fixdate2(x):

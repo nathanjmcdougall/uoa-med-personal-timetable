@@ -1,6 +1,13 @@
+[build-system]
+build-backend = "hatchling.build"
+
+requires = [ "hatchling" ]
+
 [project]
 name = "uoa-med-personal-timetable"
 version = "0.1.0"
+description = "A utility for creating personalized iCalendar files for University of Auckland Med students."
+readme = "README.md"
 authors = [
   { name = "Nathan McDougall", email = "nathan.j.mcdougall@gmail.com" },
 ]

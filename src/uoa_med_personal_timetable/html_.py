@@ -1,8 +1,8 @@
-def header():
+def header() -> str:
     return "<h1>Medical School Personal Timetables</h1>"
 
 
-def footer():
+def footer() -> str:
     return """\
 <br clear=all>
 <hr>

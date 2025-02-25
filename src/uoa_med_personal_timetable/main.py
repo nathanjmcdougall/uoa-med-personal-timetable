@@ -5,7 +5,7 @@ from datetime import datetime
 from ics import Calendar, Event
 
 
-def getGPVisit(name):
+def get_gp_visit(name):
     # 2:00 PM,5:00 PM,Offsite,LabILA,GP Visit
     # "Student Name" TEXT, "Site" TEXT, "GP Visit date"
     sql = 'select * from gpvisit where `student name`="' + name + '"'
@@ -53,7 +53,7 @@ def footer():
     return o
 
 
-def pNum(nrange, match, ha=False):
+def p_num(nrange, match, ha=False):
     inrange = []
     buildnum = ""
     groupcode = ""
@@ -84,17 +84,17 @@ def pNum(nrange, match, ha=False):
     return match in inrange
 
 
-def doLine(event_id, sga, hal, comlab):
+def do_line(event_id, sga, hal, comlab):
     if not event_id:
         return True
     if event_id[0:3] == "SGA":
-        return pNum(event_id[4:].replace("& SGA", " ").strip(), sga)
+        return p_num(event_id[4:].replace("& SGA", " ").strip(), sga)
     if event_id[0:6] == "ComLab":
-        return pNum(event_id[6:].strip(), comlab)
+        return p_num(event_id[6:].strip(), comlab)
     if event_id == "6B-15B":
         event_id = "Tbl " + event_id
     if event_id[0:3] == "Tbl":
-        return pNum(event_id[3:].replace("& Tbl", " ").strip(), hal, True)
+        return p_num(event_id[3:].replace("& Tbl", " ").strip(), hal, True)
     print("Unknown group label", event_id)
     return True
 
@@ -128,13 +128,13 @@ for idx, p in enumerate(person, start=1):
     nt = ""
     z = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
     cal = Calendar()
-    rsched, x, e = getGPVisit(fullname)
+    rsched, x, e = get_gp_visit(fullname)
     if rsched:
         z += x
         cal.events.add(e)
         # print(fullname,e.location)
     for t in tt:
-        if (t["session"] != "GP Visit" or rsched == 0) and doLine(
+        if (t["session"] != "GP Visit" or rsched == 0) and do_line(
             t["groupid"], p["sga"], p["hal"], p["comlab"]
         ):
             e = Event()

@@ -27,7 +27,7 @@ test = [
 line-length = 88
 
 src = [ "src" ]
-lint.select = [ "A", "C4", "E4", "E7", "E9", "EM", "F", "FURB", "I", "PLE", "PLR", "PT", "RUF", "SIM", "UP" ]
+lint.select = [ "A", "C4", "E4", "E7", "E9", "EM", "F", "FURB", "I", "N", "PLE", "PLR", "PT", "RUF", "SIM", "UP" ]
 lint.ignore = [ "PLR2004", "SIM108" ]
 
 [tool.codespell]

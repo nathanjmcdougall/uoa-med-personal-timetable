@@ -30,7 +30,7 @@ class Timetable(DataFrameModel):
     groupid: str
 
 
-def main(timetable_sqlite_path: Path):
+def main(*, output_dir: Path, timetable_sqlite_path: Path):
     cnxn = sqlite3.connect(timetable_sqlite_path)
     cnxn.row_factory = sqlite3.Row
     c = cnxn.cursor()
@@ -38,12 +38,27 @@ def main(timetable_sqlite_path: Path):
     people = c.execute("select * from people").fetchall()
     people = sorted(people, key=get_surname_initial)
 
-    # Get the HTML body
-
-    # Get the iCal files
+    # N.B. this needs to be extracted from a single unified iCal file, which populates
+    # this SQLite table.
     timetables = c.execute("select * from tt order by rowid").fetchall()
+
+    create_ical_files(output_dir, people=people, timetables=timetables)
+    create_csv_files(output_dir, people=people, timetables=timetables)
+
+    with open("index.htm", mode="w") as f:
+        f.writelines(
+            header()
+            + get_surname_initial_hyperlink_str(people)
+            + get_html_body(people)
+            + footer()
+        )
+
+
+def create_ical_files(
+    output_dir: Path, *, people: list[Person], timetables: list[Timetable]
+) -> None:
     for idx, person in enumerate(people, start=1):
-        cal = Calendar()
+        calendar = Calendar()
 
         for timetable in timetables:
             if do_line(
@@ -68,11 +83,14 @@ def main(timetable_sqlite_path: Path):
                 else:
                     event.name = get_event_title(timetable)
                 event.description = get_event_description(timetable)
-                cal.events.add(event)
+                calendar.events.add(event)
 
-        save_cal(cal, f"{idx}.ics")
+        save_cal(calendar=calendar, filename=output_dir / f"{idx}.ics")
 
-    # Get the CSV files
+
+def create_csv_files(
+    output_dir: Path, *, people: list[Person], timetables: list[Timetable]
+):
     for idx, person in enumerate(people, start=1):
         csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
         for timetable in timetables:
@@ -84,15 +102,7 @@ def main(timetable_sqlite_path: Path):
             ):
                 csv_str += f'{timetable[Timetable.date]},{timetable[Timetable.st]},{timetable[Timetable.et]},"{timetable[Timetable.venue]}","{timetable[Timetable.module]}",{timetable[Timetable.session]},"{timetable[Timetable.title]}","{timetable[Timetable.staff]}",{timetable[Timetable.groupid]}\r\n'
 
-        save_csv_str(csv_str, f"{idx}.csv")
-
-    with open("index.htm", "w") as f:
-        f.writelines(
-            header()
-            + get_surname_initial_hyperlink_str(people)
-            + get_html_body(people)
-            + footer()
-        )
+        save_csv_str(csv_str=csv_str, filename=output_dir / f"{idx}.csv")
 
 
 def get_html_body(people: list[sqlite3.Row]) -> str:
@@ -158,17 +168,20 @@ def get_surname_initial(person: sqlite3.Row) -> str:
     return str(person[Person.last]).strip("'")[0].upper()
 
 
-def save_cal(cal: Calendar, filename: str) -> None:
-    lines = cal.serialize_iter()
-    with open(filename, "w") as my_file:
+def save_cal(*, calendar: Calendar, filename: Path) -> None:
+    lines = calendar.serialize_iter()
+    with open(filename, mode="w") as my_file:
         for line in lines:
             my_file.writelines(line.replace("00Z", "00"))
 
 
-def save_csv_str(csv_str: str, filename: str) -> None:
-    with open(filename, "w") as f:
+def save_csv_str(*, csv_str: str, filename: Path) -> None:
+    with open(filename, mode="w") as f:
         f.writelines(csv_str)
 
 
 if __name__ == "__main__":
-    main(timetable_sqlite_path="tt.db")
+    main(
+        output_dir=Path.cwd() / ".output",
+        timetable_sqlite_path="tt.db",
+    )

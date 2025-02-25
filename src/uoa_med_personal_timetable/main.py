@@ -1,34 +1,19 @@
 import sqlite3
 from pathlib import Path
 
-import pandera as pa
 from ics import Calendar
 from ics import Event as ICSEvent
-from pandera import DataFrameModel
 
 from uoa_med_personal_timetable.date import fixdate
+from uoa_med_personal_timetable.event import (
+    Event,
+    get_event_categories,
+    get_event_description,
+    get_event_title,
+)
 from uoa_med_personal_timetable.html_ import footer, header
 from uoa_med_personal_timetable.parse import this_event_is_for_this_person
-
-
-class Person(DataFrameModel):
-    first: str
-    last: str
-    sga: str
-    hal: str
-    comlab: str
-
-
-class Event(DataFrameModel):
-    date: str
-    st: str = pa.Field(description="Start Time")
-    et: str = pa.Field(description="End Time")
-    venue: str
-    module: str
-    session: str
-    title: str
-    staff: str
-    groupid: str
+from uoa_med_personal_timetable.person import Person, get_full_name, get_surname_initial
 
 
 def main(*, output_dir: Path, timetable_sqlite_path: Path):
@@ -77,13 +62,6 @@ def create_ical_files(
         save_cal(calendar=calendar, filename=output_dir / f"{idx}.ics")
 
 
-def get_event_categories(event) -> list[str] | None:
-    event_id: str = event[Event.groupid]
-    if not event_id:
-        return None
-    return [event_id]
-
-
 def create_csv_files(output_dir: Path, *, people: list[Person], events: list[Event]):
     for idx, person in enumerate(people, start=1):
         csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
@@ -110,24 +88,6 @@ def get_html_body(people: list[sqlite3.Row]) -> str:
         )
 
 
-def get_event_description(event: sqlite3.Row) -> str:
-    title = get_event_title()
-
-    if event[Event.staff]:
-        description = f"{title} Staff: {event[Event.staff]}"
-    else:
-        description = title
-
-    return description
-
-
-def get_event_title(event: sqlite3.Row) -> str:
-    if event[Event.title]:
-        return event[Event.title]
-    else:
-        return f"{event[Event.session]}({event[Event.module]})"
-
-
 def get_person_html_body(
     person: sqlite3.Row, *, stem: str, first_initial_instance: bool = False
 ) -> str:
@@ -140,12 +100,6 @@ def get_person_html_body(
     person_body += f"<a href={stem}.ics>iCal</a> | <a href={stem}.csv>CSV</a>"
 
 
-def get_full_name(person: sqlite3.Row) -> str:
-    first_name = str(person[Person.first]).strip("'")
-    last_name = str(person[Person.last]).strip("'")
-    return f"{first_name} {last_name}"
-
-
 def get_surname_initial_hyperlink_str(people: list[sqlite3.Row]) -> str:
     surname_initials = sorted(
         {get_surname_initial(person): person for person in people}
@@ -155,10 +109,6 @@ def get_surname_initial_hyperlink_str(people: list[sqlite3.Row]) -> str:
     ]
     surname_initial_hyperlinks_str = " | ".join(surname_initial_hyperlinks)
     return surname_initial_hyperlinks_str
-
-
-def get_surname_initial(person: sqlite3.Row) -> str:
-    return str(person[Person.last]).strip("'")[0].upper()
 
 
 def save_cal(*, calendar: Calendar, filename: Path) -> None:

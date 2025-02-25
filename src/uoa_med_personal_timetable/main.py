@@ -2,7 +2,8 @@ import sqlite3
 from pathlib import Path
 
 import pandera as pa
-from ics import Calendar, Event
+from ics import Calendar
+from ics import Event as ICSEvent
 from pandera import DataFrameModel
 
 from uoa_med_personal_timetable.date import fixdate
@@ -18,7 +19,7 @@ class Person(DataFrameModel):
     comlab: str
 
 
-class Timetable(DataFrameModel):
+class Event(DataFrameModel):
     date: str
     st: str = pa.Field(description="Start Time")
     et: str = pa.Field(description="End Time")
@@ -40,10 +41,10 @@ def main(*, output_dir: Path, timetable_sqlite_path: Path):
 
     # N.B. this needs to be extracted from a single unified iCal file, which populates
     # this SQLite table.
-    timetables = c.execute("select * from tt order by rowid").fetchall()
+    events = c.execute("select * from tt order by rowid").fetchall()
 
-    create_ical_files(output_dir, people=people, timetables=timetables)
-    create_csv_files(output_dir, people=people, timetables=timetables)
+    create_ical_files(output_dir, people=people, events=events)
+    create_csv_files(output_dir, people=people, events=events)
 
     with open(output_dir / "index.htm", mode="w") as f:
         f.writelines(
@@ -55,45 +56,41 @@ def main(*, output_dir: Path, timetable_sqlite_path: Path):
 
 
 def create_ical_files(
-    output_dir: Path, *, people: list[Person], timetables: list[Timetable]
+    output_dir: Path, *, people: list[Person], events: list[Event]
 ) -> None:
     for idx, person in enumerate(people, start=1):
-        events: list[Event] = []
-        for timetable in timetables:
-            event_id = timetable[Timetable.groupid]
-
-            if this_event_is_for_this_person(event_id, person=person):
-                event = Event(
-                    begin=fixdate(
-                        f"{timetable[Timetable.date]} {timetable[Timetable.st]}"
-                    ),
-                    end=fixdate(
-                        f"{timetable[Timetable.date]} {timetable[Timetable.et]}"
-                    ),
-                    location=timetable[Timetable.venue],
+        events: list[ICSEvent] = []
+        for event in events:
+            if this_event_is_for_this_person(event=event, person=person):
+                event = ICSEvent(
+                    begin=fixdate(f"{event[Event.date]} {event[Event.st]}"),
+                    end=fixdate(f"{event[Event.date]} {event[Event.et]}"),
+                    location=event[Event.venue],
+                    categories=get_event_categories(event),
+                    name=get_event_title(event),
                 )
-                if timetable[Timetable.groupid]:
-                    event.categories = [timetable[Timetable.groupid]]
-                if timetable[Timetable.title]:
-                    event.name = timetable[Timetable.title]
-                else:
-                    event.name = get_event_title(timetable)
-                event.description = get_event_description(timetable)
+
+                event.description = get_event_description(event)
                 events.append(event)
 
         calendar = Calendar(events=events)
         save_cal(calendar=calendar, filename=output_dir / f"{idx}.ics")
 
 
-def create_csv_files(
-    output_dir: Path, *, people: list[Person], timetables: list[Timetable]
-):
+def get_event_categories(event) -> list[str] | None:
+    event_id: str = event[Event.groupid]
+    if not event_id:
+        return None
+    return [event_id]
+
+
+def create_csv_files(output_dir: Path, *, people: list[Person], events: list[Event]):
     for idx, person in enumerate(people, start=1):
         csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
-        for timetable in timetables:
-            event_id = timetable[Timetable.groupid]
+        for event in events:
+            event_id = event[Event.groupid]
             if this_event_is_for_this_person(event_id=event_id, person=person):
-                csv_str += f'{timetable[Timetable.date]},{timetable[Timetable.st]},{timetable[Timetable.et]},"{timetable[Timetable.venue]}","{timetable[Timetable.module]}",{timetable[Timetable.session]},"{timetable[Timetable.title]}","{timetable[Timetable.staff]}",{timetable[Timetable.groupid]}\r\n'
+                csv_str += f'{event[Event.date]},{event[Event.st]},{event[Event.et]},"{event[Event.venue]}","{event[Event.module]}",{event[Event.session]},"{event[Event.title]}","{event[Event.staff]}",{event[Event.groupid]}\r\n'
 
         save_csv_str(csv_str=csv_str, filename=output_dir / f"{idx}.csv")
 
@@ -113,19 +110,22 @@ def get_html_body(people: list[sqlite3.Row]) -> str:
         )
 
 
-def get_event_description(timetable: sqlite3.Row) -> str:
+def get_event_description(event: sqlite3.Row) -> str:
     title = get_event_title()
 
-    if timetable[Timetable.staff]:
-        description = f"{title} Staff: {timetable[Timetable.staff]}"
+    if event[Event.staff]:
+        description = f"{title} Staff: {event[Event.staff]}"
     else:
         description = title
 
     return description
 
 
-def get_event_title(timetable: sqlite3.Row) -> str:
-    return f"{timetable[Timetable.session]}({timetable[Timetable.module]})"
+def get_event_title(event: sqlite3.Row) -> str:
+    if event[Event.title]:
+        return event[Event.title]
+    else:
+        return f"{event[Event.session]}({event[Event.module]})"
 
 
 def get_person_html_body(

@@ -1,9 +1,10 @@
 import sqlite3
 
-from uoa_med_personal_timetable.main import Person
+from uoa_med_personal_timetable.main import Event, Person
 
 
-def this_event_is_for_this_person(*, event_id: str, person: sqlite3.Row) -> bool:
+def this_event_is_for_this_person(*, event: sqlite3.Row, person: sqlite3.Row) -> bool:
+    event_id: str = event[Event.groupid]
     personal_sga = (person[Person.sga],)
     personal_hal = (person[Person.hal],)
     personal_comlab = (person[Person.comlab],)
@@ -13,15 +14,13 @@ def this_event_is_for_this_person(*, event_id: str, person: sqlite3.Row) -> bool
         return True
     if event_id.startswith("SGA"):
         return is_matching_class_code(
-            timetable_class_code=event_id.removeprefix("SGA")
-            .replace("& SGA", " ")
-            .strip(),
+            event_class_code=event_id.removeprefix("SGA").replace("& SGA", " ").strip(),
             person_class_code=personal_sga,
             is_tbl=False,
         )
     if event_id.startswith("ComLab"):
         return is_matching_class_code(
-            timetable_class_code=event_id.removeprefix("ComLab").strip(),
+            event_class_code=event_id.removeprefix("ComLab").strip(),
             person_class_code=personal_comlab,
             is_tbl=False,
         )
@@ -29,9 +28,7 @@ def this_event_is_for_this_person(*, event_id: str, person: sqlite3.Row) -> bool
         event_id = "Tbl " + event_id
     if event_id.startswith("Tbl"):
         return is_matching_class_code(
-            timetable_class_code=event_id.removeprefix("Tbl")
-            .replace("& Tbl", " ")
-            .strip(),
+            event_class_code=event_id.removeprefix("Tbl").replace("& Tbl", " ").strip(),
             person_class_code=personal_hal,
             is_tbl=True,
         )
@@ -40,13 +37,13 @@ def this_event_is_for_this_person(*, event_id: str, person: sqlite3.Row) -> bool
 
 
 def is_matching_class_code(
-    *, timetable_class_code: str, person_class_code: str, is_tbl: bool
+    *, event_class_code: str, person_class_code: str, is_tbl: bool
 ) -> bool:
     allowed_class_codes: set[str] = {}
     buildnum = ""
     groupcode = ""
     startrange = 0
-    for c in timetable_class_code + " ":
+    for c in event_class_code + " ":
         if c.isdigit():
             buildnum += c
         elif is_tbl and c in {"A", "B"}:

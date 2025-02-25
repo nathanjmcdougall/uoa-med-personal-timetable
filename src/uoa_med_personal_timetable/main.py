@@ -35,31 +35,28 @@ def main(timetable_sqlite_path: Path):
     cnxn = sqlite3.connect(timetable_sqlite_path)
     cnxn.row_factory = sqlite3.Row
     c = cnxn.cursor()
-    rs = c.execute("select * from tt order by rowid")
-    tt = rs.fetchall()
-    rs = c.execute("select * from people")
-    people = rs.fetchall()
-    lastname = ""
-    labels = ""
+    tt = c.execute("select * from tt order by rowid").fetchall()
+    people = c.execute("select * from people").fetchall()
     body = "<br>"
 
+    people = sorted(people, key=get_surname_initial)
+    recorded_initials = set()
+
     for idx, person in enumerate(people, start=1):
-        firstchar = person[Person.last][0:1].upper()
-        if firstchar not in ("'", lastname):
-            lastname = firstchar
-            labels += f"<a href=#{firstchar}>{firstchar}</a> |"
-            nt = f"<a name={firstchar}> </a>"
-        fullname = person[Person.first] + " " + person[Person.last]
-        body += (
-            nt
-            + "<br>"
-            + fullname
-            + f" <a href={idx}.ics>iCal</a> | <a href={idx}.csv>CSV</a>"
+        lastname_initial = get_surname_initial(person)
+
+        first_initial_instance = lastname_initial not in recorded_initials
+        if first_initial_instance:
+            recorded_initials.add(lastname_initial)
+
+        body += get_person_html_body(
+            person, stem=str(idx), first_initial_instance=first_initial_instance
         )
-        nt = ""
+
+    for idx, person in enumerate(people, start=1):
         csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
         cal = Calendar()
-        rsched, lines, e = get_gp_visit(fullname)
+        rsched, lines, e = get_gp_visit(get_full_name(person))
         if rsched:
             csv_str += lines
             cal.events.add(e)
@@ -115,7 +112,42 @@ def main(timetable_sqlite_path: Path):
         save_cal(cal, f"{idx}.ics")
 
     with open("index.htm", "w") as f:
-        f.writelines(header() + labels + body + footer())
+        f.writelines(
+            header() + get_surname_initial_hyperlink_str(people) + body + footer()
+        )
+
+
+def get_person_html_body(
+    person: sqlite3.Row, *, stem: str, first_initial_instance: bool = False
+) -> str:
+    # This is the HTML corresponding to this person
+    person_body = ""
+    if first_initial_instance:
+        person_body += f"<a name={get_surname_initial(person)}> </a>"
+    person_body += "<br>"
+    person_body += get_full_name(person)
+    person_body += f"<a href={stem}.ics>iCal</a> | <a href={stem}.csv>CSV</a>"
+
+
+def get_full_name(person: sqlite3.Row) -> str:
+    first_name = str(person[Person.first]).strip("'")
+    last_name = str(person[Person.last]).strip("'")
+    return f"{first_name} {last_name}"
+
+
+def get_surname_initial_hyperlink_str(people: list[sqlite3.Row]) -> str:
+    surname_initials = sorted(
+        {get_surname_initial(person): person for person in people}
+    )
+    surname_initial_hyperlinks = [
+        f"<a href=#{initial}>{initial}</a>" for initial in surname_initials
+    ]
+    surname_initial_hyperlinks_str = " | ".join(surname_initial_hyperlinks)
+    return surname_initial_hyperlinks_str
+
+
+def get_surname_initial(person: sqlite3.Row) -> str:
+    return str(person[Person.last]).strip("'")[0].upper()
 
 
 def save_cal(cal: Calendar, filename: str) -> None:

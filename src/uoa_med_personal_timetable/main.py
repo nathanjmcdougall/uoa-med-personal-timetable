@@ -45,7 +45,7 @@ def main(*, output_dir: Path, timetable_sqlite_path: Path):
     create_ical_files(output_dir, people=people, timetables=timetables)
     create_csv_files(output_dir, people=people, timetables=timetables)
 
-    with open("index.htm", mode="w") as f:
+    with open(output_dir / "index.htm", mode="w") as f:
         f.writelines(
             header()
             + get_surname_initial_hyperlink_str(people)

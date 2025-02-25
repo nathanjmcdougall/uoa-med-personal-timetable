@@ -13,6 +13,7 @@ classifiers = [
 ]
 dependencies = [
   "ics>=0.7.2",
+  "pandera>=0.22.1",
 ]
 
 [dependency-groups]

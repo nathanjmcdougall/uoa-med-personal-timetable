@@ -2,11 +2,20 @@ import sqlite3
 from pathlib import Path
 
 from ics import Calendar, Event
+from pandera import DataFrameModel
 
 from uoa_med_personal_timetable.date import fixdate
 from uoa_med_personal_timetable.gp import get_gp_visit
 from uoa_med_personal_timetable.html_ import footer, header
 from uoa_med_personal_timetable.parse import do_line
+
+
+class Person(DataFrameModel):
+    first: str
+    last: str
+    sga: str
+    hal: str
+    comlab: str
 
 
 def main(timetable_sqlite_path: Path):
@@ -16,18 +25,18 @@ def main(timetable_sqlite_path: Path):
     rs = c.execute("select * from tt order by rowid")
     tt = rs.fetchall()
     rs = c.execute("select * from people")
-    person = rs.fetchall()
+    people = rs.fetchall()
     lastname = ""
     labels = ""
     body = "<br>"
 
-    for idx, p in enumerate(person, start=1):
-        firstchar = p["last"][0:1].upper()
+    for idx, person in enumerate(people, start=1):
+        firstchar = person[Person.last][0:1].upper()
         if firstchar not in ("'", lastname):
             lastname = firstchar
             labels += f"<a href=#{firstchar}>{firstchar}</a> |"
             nt = f"<a name={firstchar}> </a>"
-        fullname = p["first"] + " " + p["last"]
+        fullname = person[Person.first] + " " + person[Person.last]
         body += (
             nt
             + "<br>"
@@ -44,7 +53,10 @@ def main(timetable_sqlite_path: Path):
 
         for t in tt:
             if (t["session"] != "GP Visit" or rsched == 0) and do_line(
-                t["groupid"], p["sga"], p["hal"], p["comlab"]
+                t["groupid"],
+                person[Person.sga],
+                person[Person.hal],
+                person[Person.comlab],
             ):
                 e = Event()
                 e.begin = fixdate(t["date"] + " " + t["st"])

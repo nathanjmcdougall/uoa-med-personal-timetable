@@ -1,4 +1,4 @@
-def do_line(event_id, sga, hal, comlab):
+def do_line(event_id, *, sga, hal, comlab):
     if not event_id:
         return True
     if event_id[0:3] == "SGA":

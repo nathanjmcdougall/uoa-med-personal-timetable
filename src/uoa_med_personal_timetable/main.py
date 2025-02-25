@@ -34,13 +34,70 @@ def main(timetable_sqlite_path: Path):
     cnxn = sqlite3.connect(timetable_sqlite_path)
     cnxn.row_factory = sqlite3.Row
     c = cnxn.cursor()
-    tt = c.execute("select * from tt order by rowid").fetchall()
+
     people = c.execute("select * from people").fetchall()
-    body = "<br>"
-
     people = sorted(people, key=get_surname_initial)
-    recorded_initials = set()
 
+    # Get the HTML body
+
+    # Get the iCal files
+    timetables = c.execute("select * from tt order by rowid").fetchall()
+    for idx, person in enumerate(people, start=1):
+        cal = Calendar()
+
+        for timetable in timetables:
+            if do_line(
+                timetable[Timetable.groupid],
+                sga=person[Person.sga],
+                hal=person[Person.hal],
+                comlab=person[Person.comlab],
+            ):
+                event = Event(
+                    begin=fixdate(
+                        f"{timetable[Timetable.date]} {timetable[Timetable.st]}"
+                    ),
+                    end=fixdate(
+                        f"{timetable[Timetable.date]} {timetable[Timetable.et]}"
+                    ),
+                    location=timetable[Timetable.venue],
+                )
+                if timetable[Timetable.groupid]:
+                    event.categories = [timetable[Timetable.groupid]]
+                if timetable[Timetable.title]:
+                    event.name = timetable[Timetable.title]
+                else:
+                    event.name = get_event_title(timetable)
+                event.description = get_event_description(timetable)
+                cal.events.add(event)
+
+        save_cal(cal, f"{idx}.ics")
+
+    # Get the CSV files
+    for idx, person in enumerate(people, start=1):
+        csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
+        for timetable in timetables:
+            if do_line(
+                timetable[Timetable.groupid],
+                sga=person[Person.sga],
+                hal=person[Person.hal],
+                comlab=person[Person.comlab],
+            ):
+                csv_str += f'{timetable[Timetable.date]},{timetable[Timetable.st]},{timetable[Timetable.et]},"{timetable[Timetable.venue]}","{timetable[Timetable.module]}",{timetable[Timetable.session]},"{timetable[Timetable.title]}","{timetable[Timetable.staff]}",{timetable[Timetable.groupid]}\r\n'
+
+        save_csv_str(csv_str, f"{idx}.csv")
+
+    with open("index.htm", "w") as f:
+        f.writelines(
+            header()
+            + get_surname_initial_hyperlink_str(people)
+            + get_html_body(people)
+            + footer()
+        )
+
+
+def get_html_body(people: list[sqlite3.Row]) -> str:
+    recorded_initials = set()
+    body = "<br>"
     for idx, person in enumerate(people, start=1):
         lastname_initial = get_surname_initial(person)
 
@@ -52,64 +109,20 @@ def main(timetable_sqlite_path: Path):
             person, stem=str(idx), first_initial_instance=first_initial_instance
         )
 
-    for idx, person in enumerate(people, start=1):
-        csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
-        cal = Calendar()
 
-        for t in tt:
-            if do_line(
-                t[Timetable.groupid],
-                person[Person.sga],
-                person[Person.hal],
-                person[Person.comlab],
-            ):
-                e = Event()
-                e.begin = fixdate(t[Timetable.date] + " " + t[Timetable.st])
-                try:
-                    e.end = fixdate(t[Timetable.date] + " " + t[Timetable.et])
-                except ValueError:
-                    e.begin = fixdate(t[Timetable.date] + " " + t[Timetable.et])
-                    e.end = fixdate(t[Timetable.date] + " " + t[Timetable.st])
-                e.location = t[Timetable.venue]
-                lines = t[Timetable.session] + " (" + t[Timetable.module] + ")"
-                if t[Timetable.title]:
-                    e.name = t[Timetable.title]
-                else:
-                    e.name = lines
-                if t[Timetable.staff]:
-                    lines += " Staff: " + t[Timetable.staff]
-                if t[Timetable.groupid]:
-                    e.categories = [t[Timetable.groupid]]
-                e.description = lines
-                cal.events.add(e)
-                csv_str += (
-                    t[Timetable.date]
-                    + ","
-                    + t[Timetable.st]
-                    + ","
-                    + t[Timetable.et]
-                    + ',"'
-                    + t[Timetable.venue]
-                    + '","'
-                    + t[Timetable.module]
-                    + '",'
-                    + t[Timetable.session]
-                    + ',"'
-                    + t[Timetable.title]
-                    + '","'
-                    + t[Timetable.staff]
-                    + '",'
-                    + t[Timetable.groupid]
-                    + "\r\n"
-                )
+def get_event_description(timetable: sqlite3.Row) -> str:
+    title = get_event_title()
 
-        save_csv_str(csv_str, f"{idx}.csv")
-        save_cal(cal, f"{idx}.ics")
+    if timetable[Timetable.staff]:
+        description = f"{title} Staff: {timetable[Timetable.staff]}"
+    else:
+        description = title
 
-    with open("index.htm", "w") as f:
-        f.writelines(
-            header() + get_surname_initial_hyperlink_str(people) + body + footer()
-        )
+    return description
+
+
+def get_event_title(timetable: sqlite3.Row) -> str:
+    return f"{timetable[Timetable.session]}({timetable[Timetable.module]})"
 
 
 def get_person_html_body(

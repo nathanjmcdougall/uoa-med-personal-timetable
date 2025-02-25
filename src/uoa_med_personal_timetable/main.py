@@ -1,6 +1,7 @@
 import sqlite3
 from pathlib import Path
 
+import pandera as pa
 from ics import Calendar, Event
 from pandera import DataFrameModel
 
@@ -16,6 +17,18 @@ class Person(DataFrameModel):
     sga: str
     hal: str
     comlab: str
+
+
+class Timetable(DataFrameModel):
+    date: str
+    st: str = pa.Field(description="Start Time")
+    et: str = pa.Field(description="End Time")
+    venue: str
+    module: str
+    session: str
+    title: str
+    staff: str
+    groupid: str
 
 
 def main(timetable_sqlite_path: Path):
@@ -52,49 +65,49 @@ def main(timetable_sqlite_path: Path):
             cal.events.add(e)
 
         for t in tt:
-            if (t["session"] != "GP Visit" or rsched == 0) and do_line(
-                t["groupid"],
+            if (t[Timetable.session] != "GP Visit" or rsched == 0) and do_line(
+                t[Timetable.groupid],
                 person[Person.sga],
                 person[Person.hal],
                 person[Person.comlab],
             ):
                 e = Event()
-                e.begin = fixdate(t["date"] + " " + t["st"])
+                e.begin = fixdate(t[Timetable.date] + " " + t[Timetable.st])
                 try:
-                    e.end = fixdate(t["date"] + " " + t["et"])
+                    e.end = fixdate(t[Timetable.date] + " " + t[Timetable.et])
                 except ValueError:
-                    e.begin = fixdate(t["date"] + " " + t["et"])
-                    e.end = fixdate(t["date"] + " " + t["st"])
-                e.location = t["venue"]
-                lines = t["session"] + " (" + t["module"] + ")"
-                if t["title"]:
-                    e.name = t["title"]
+                    e.begin = fixdate(t[Timetable.date] + " " + t[Timetable.et])
+                    e.end = fixdate(t[Timetable.date] + " " + t[Timetable.st])
+                e.location = t[Timetable.venue]
+                lines = t[Timetable.session] + " (" + t[Timetable.module] + ")"
+                if t[Timetable.title]:
+                    e.name = t[Timetable.title]
                 else:
                     e.name = lines
-                if t["staff"]:
-                    lines += " Staff: " + t["staff"]
-                if t["groupid"]:
-                    e.categories = [t["groupid"]]
+                if t[Timetable.staff]:
+                    lines += " Staff: " + t[Timetable.staff]
+                if t[Timetable.groupid]:
+                    e.categories = [t[Timetable.groupid]]
                 e.description = lines
                 cal.events.add(e)
                 csv_str += (
-                    t["date"]
+                    t[Timetable.date]
                     + ","
-                    + t["st"]
+                    + t[Timetable.st]
                     + ","
-                    + t["et"]
+                    + t[Timetable.et]
                     + ',"'
-                    + t["venue"]
+                    + t[Timetable.venue]
                     + '","'
-                    + t["module"]
+                    + t[Timetable.module]
                     + '",'
-                    + t["session"]
+                    + t[Timetable.session]
                     + ',"'
-                    + t["title"]
+                    + t[Timetable.title]
                     + '","'
-                    + t["staff"]
+                    + t[Timetable.staff]
                     + '",'
-                    + t["groupid"]
+                    + t[Timetable.groupid]
                     + "\r\n"
                 )
 

@@ -5,7 +5,7 @@ from ics import Calendar, Event
 
 from uoa_med_personal_timetable.date import fixdate
 from uoa_med_personal_timetable.gp import get_gp_visit
-from uoa_med_personal_timetable.html_ import footer
+from uoa_med_personal_timetable.html_ import footer, header
 from uoa_med_personal_timetable.parse import do_line
 
 
@@ -18,7 +18,7 @@ def main(timetable_sqlite_path: Path):
     rs = c.execute("select * from people")
     person = rs.fetchall()
     lastname = ""
-    labels = "<h1>Medical School Personal Timetables</h1>"
+    labels = ""
     body = "<br>"
 
     for idx, p in enumerate(person, start=1):
@@ -90,7 +90,7 @@ def main(timetable_sqlite_path: Path):
         save_cal(cal, f"{idx}.ics")
 
     with open("index.htm", "w") as f:
-        f.writelines(labels + body + footer())
+        f.writelines(header() + labels + body + footer())
 
 
 def save_cal(cal: Calendar, filename: str) -> None:

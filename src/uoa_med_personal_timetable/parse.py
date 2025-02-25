@@ -1,4 +1,13 @@
-def do_line(event_id: str, *, sga: str, hal: str, comlab: str) -> bool:
+import sqlite3
+
+from uoa_med_personal_timetable.main import Person
+
+
+def this_event_is_for_this_person(*, event_id: str, person: sqlite3.Row) -> bool:
+    personal_sga = (person[Person.sga],)
+    personal_hal = (person[Person.hal],)
+    personal_comlab = (person[Person.comlab],)
+
     if not event_id:
         # TODO I don't know why an event wouldn't have an EventID
         return True
@@ -7,13 +16,13 @@ def do_line(event_id: str, *, sga: str, hal: str, comlab: str) -> bool:
             timetable_class_code=event_id.removeprefix("SGA")
             .replace("& SGA", " ")
             .strip(),
-            person_class_code=sga,
+            person_class_code=personal_sga,
             is_tbl=False,
         )
     if event_id.startswith("ComLab"):
         return is_matching_class_code(
             timetable_class_code=event_id.removeprefix("ComLab").strip(),
-            person_class_code=comlab,
+            person_class_code=personal_comlab,
             is_tbl=False,
         )
     if event_id == "6B-15B":
@@ -23,7 +32,7 @@ def do_line(event_id: str, *, sga: str, hal: str, comlab: str) -> bool:
             timetable_class_code=event_id.removeprefix("Tbl")
             .replace("& Tbl", " ")
             .strip(),
-            person_class_code=hal,
+            person_class_code=personal_hal,
             is_tbl=True,
         )
     msg = f"Unknown group label {event_id}"

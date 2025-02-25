@@ -7,7 +7,7 @@ from pandera import DataFrameModel
 
 from uoa_med_personal_timetable.date import fixdate
 from uoa_med_personal_timetable.html_ import footer, header
-from uoa_med_personal_timetable.parse import do_line
+from uoa_med_personal_timetable.parse import this_event_is_for_this_person
 
 
 class Person(DataFrameModel):
@@ -58,15 +58,11 @@ def create_ical_files(
     output_dir: Path, *, people: list[Person], timetables: list[Timetable]
 ) -> None:
     for idx, person in enumerate(people, start=1):
-        calendar = Calendar()
-
+        events: list[Event] = []
         for timetable in timetables:
-            if do_line(
-                timetable[Timetable.groupid],
-                sga=person[Person.sga],
-                hal=person[Person.hal],
-                comlab=person[Person.comlab],
-            ):
+            event_id = timetable[Timetable.groupid]
+
+            if this_event_is_for_this_person(event_id, person=person):
                 event = Event(
                     begin=fixdate(
                         f"{timetable[Timetable.date]} {timetable[Timetable.st]}"
@@ -83,8 +79,9 @@ def create_ical_files(
                 else:
                     event.name = get_event_title(timetable)
                 event.description = get_event_description(timetable)
-                calendar.events.add(event)
+                events.append(event)
 
+        calendar = Calendar(events=events)
         save_cal(calendar=calendar, filename=output_dir / f"{idx}.ics")
 
 
@@ -94,12 +91,8 @@ def create_csv_files(
     for idx, person in enumerate(people, start=1):
         csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
         for timetable in timetables:
-            if do_line(
-                timetable[Timetable.groupid],
-                sga=person[Person.sga],
-                hal=person[Person.hal],
-                comlab=person[Person.comlab],
-            ):
+            event_id = timetable[Timetable.groupid]
+            if this_event_is_for_this_person(event_id=event_id, person=person):
                 csv_str += f'{timetable[Timetable.date]},{timetable[Timetable.st]},{timetable[Timetable.et]},"{timetable[Timetable.venue]}","{timetable[Timetable.module]}",{timetable[Timetable.session]},"{timetable[Timetable.title]}","{timetable[Timetable.staff]}",{timetable[Timetable.groupid]}\r\n'
 
         save_csv_str(csv_str=csv_str, filename=output_dir / f"{idx}.csv")

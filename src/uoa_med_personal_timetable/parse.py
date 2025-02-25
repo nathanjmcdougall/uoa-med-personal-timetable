@@ -9,7 +9,8 @@ def do_line(event_id, sga, hal, comlab):
         event_id = "Tbl " + event_id
     if event_id[0:3] == "Tbl":
         return p_num(event_id[3:].replace("& Tbl", " ").strip(), hal, True)
-    print("Unknown group label", event_id)
+    msg = f"Unknown group label {event_id}"
+    raise ValueError(msg)
     return True
 
 
@@ -31,7 +32,8 @@ def p_num(nrange, match, ha=False):
                 buildnum = ""
             elif startrange:
                 if c != " ":
-                    print(c, "during range")
+                    msg = f"Unexpected {c} during range"
+                    raise ValueError(msg)
                 for x in range(startrange, v + 1):
                     inrange.append(str(x) + groupcode)
                 startrange = 0
@@ -40,5 +42,6 @@ def p_num(nrange, match, ha=False):
                 inrange.append(str(v) + groupcode)
                 buildnum = ""
                 if c != " ":
-                    print(c, "during spec")
+                    msg = f"Unexpected {c} during spec"
+                    raise ValueError(msg)
     return match in inrange

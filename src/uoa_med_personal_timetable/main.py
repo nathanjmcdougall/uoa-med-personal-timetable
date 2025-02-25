@@ -1,5 +1,5 @@
 import sqlite3
-import sys
+from pathlib import Path
 
 from ics import Calendar, Event
 
@@ -8,8 +8,9 @@ from uoa_med_personal_timetable.gp import get_gp_visit
 from uoa_med_personal_timetable.html_ import footer
 from uoa_med_personal_timetable.parse import do_line
 
-if __name__ == "__main__":
-    cnxn = sqlite3.connect("tt.db")
+
+def main(timetable_sqlite_path: Path):
+    cnxn = sqlite3.connect(timetable_sqlite_path)
     cnxn.row_factory = sqlite3.Row
     c = cnxn.cursor()
     rs = c.execute("select * from tt order by rowid")
@@ -23,8 +24,6 @@ if __name__ == "__main__":
     for idx, p in enumerate(person, start=1):
         firstchar = p["last"][0:1].upper()
         if firstchar not in ("'", lastname):
-            if firstchar < lastname:
-                print(p["first"] + " " + p["last"])
             lastname = firstchar
             labels += f"<a href=#{firstchar}>{firstchar}</a> |"
             nt = f"<a name={firstchar}> </a>"
@@ -36,11 +35,11 @@ if __name__ == "__main__":
             + f" <a href={idx}.ics>iCal</a> | <a href={idx}.csv>CSV</a>"
         )
         nt = ""
-        z = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
+        csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
         cal = Calendar()
-        rsched, x, e = get_gp_visit(fullname)
+        rsched, lines, e = get_gp_visit(fullname)
         if rsched:
-            z += x
+            csv_str += lines
             cal.events.add(e)
 
         for t in tt:
@@ -52,28 +51,21 @@ if __name__ == "__main__":
                 try:
                     e.end = fixdate(t["date"] + " " + t["et"])
                 except ValueError:
-                    print(t["title"], t["date"], "start", t["st"], "end", t["et"])
                     e.begin = fixdate(t["date"] + " " + t["et"])
-                    try:
-                        e.end = fixdate(t["date"] + " " + t["st"])
-                    except ValueError:
-                        print("End time error " + t["et"])
-                        print(t["title"], t["date"], "start", t["st"], "end", t["et"])
-                        sys.exit(10)
-                    pass
+                    e.end = fixdate(t["date"] + " " + t["st"])
                 e.location = t["venue"]
-                x = t["session"] + " (" + t["module"] + ")"
+                lines = t["session"] + " (" + t["module"] + ")"
                 if t["title"]:
                     e.name = t["title"]
                 else:
-                    e.name = x
+                    e.name = lines
                 if t["staff"]:
-                    x += " Staff: " + t["staff"]
+                    lines += " Staff: " + t["staff"]
                 if t["groupid"]:
                     e.categories = [t["groupid"]]
-                e.description = x
+                e.description = lines
                 cal.events.add(e)
-                z += (
+                csv_str += (
                     t["date"]
                     + ","
                     + t["st"]
@@ -93,11 +85,25 @@ if __name__ == "__main__":
                     + t["groupid"]
                     + "\r\n"
                 )
-        with open(f"{idx}.csv", "w") as f:
-            f.writelines(z)
-        x = cal.serialize_iter()
-        with open(f"{idx}.ics", "w") as my_file:
-            for line in x:
-                my_file.writelines(line.replace("00Z", "00"))
+
+        save_csv_str(csv_str, f"{idx}.csv")
+        save_cal(cal, f"{idx}.ics")
+
     with open("index.htm", "w") as f:
         f.writelines(labels + body + footer())
+
+
+def save_cal(cal: Calendar, filename: str) -> None:
+    lines = cal.serialize_iter()
+    with open(filename, "w") as my_file:
+        for line in lines:
+            my_file.writelines(line.replace("00Z", "00"))
+
+
+def save_csv_str(csv_str: str, filename: str) -> None:
+    with open(filename, "w") as f:
+        f.writelines(csv_str)
+
+
+if __name__ == "__main__":
+    main(timetable_sqlite_path="tt.db")

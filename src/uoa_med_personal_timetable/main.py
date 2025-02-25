@@ -6,7 +6,6 @@ from ics import Calendar, Event
 from pandera import DataFrameModel
 
 from uoa_med_personal_timetable.date import fixdate
-from uoa_med_personal_timetable.gp import get_gp_visit
 from uoa_med_personal_timetable.html_ import footer, header
 from uoa_med_personal_timetable.parse import do_line
 
@@ -56,13 +55,9 @@ def main(timetable_sqlite_path: Path):
     for idx, person in enumerate(people, start=1):
         csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
         cal = Calendar()
-        rsched, lines, e = get_gp_visit(get_full_name(person))
-        if rsched:
-            csv_str += lines
-            cal.events.add(e)
 
         for t in tt:
-            if (t[Timetable.session] != "GP Visit" or rsched == 0) and do_line(
+            if do_line(
                 t[Timetable.groupid],
                 person[Person.sga],
                 person[Person.hal],

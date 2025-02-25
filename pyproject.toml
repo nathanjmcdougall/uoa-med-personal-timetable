@@ -1,0 +1,57 @@
+[project]
+name = "uoa-med-personal-timetable"
+version = "0.1.0"
+authors = [
+  { name = "Nathan McDougall", email = "nathan.j.mcdougall@gmail.com" },
+]
+requires-python = ">=3.11.6"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [  ]
+
+[dependency-groups]
+dev = [ "deptry>=0.23.0", "pre-commit>=4.1.0", "ruff>=0.9.7" ]
+test = [
+  "coverage[toml]>=7.6.12",
+  "pytest>=8.3.4",
+  "pytest-cov>=6.0.0",
+]
+
+[tool.ruff]
+line-length = 88
+
+src = [ "src" ]
+lint.select = [ "A", "C4", "E4", "E7", "E9", "EM", "F", "FURB", "I", "PLE", "PLR", "PT", "RUF", "SIM", "UP" ]
+lint.ignore = [ "PLR2004", "SIM108" ]
+
+[tool.codespell]
+ignore-regex = [ "[A-Za-z0-9+/]{100,}" ]
+
+[tool.pyproject-fmt]
+keep_full_version = true
+
+[tool.pytest.ini_options]
+testpaths = [ "tests" ]
+addopts = [ "--import-mode=importlib" ]
+filterwarnings = [ "error" ]
+
+[tool.coverage.run]
+source = [ "src" ]
+omit = [ "*/pytest-of-*/*" ]
+
+[tool.coverage.report]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "assert_never(.*)",
+  "class .*\\bProtocol\\):",
+  "@(abc\\.)?abstractmethod",
+]
+
+[tool.uv]
+default-groups = [ "test", "dev" ]

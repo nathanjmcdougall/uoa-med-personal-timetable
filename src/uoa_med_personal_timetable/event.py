@@ -1,12 +1,10 @@
-import sqlite3
-
-import pandera as pa
+from pydantic import BaseModel, Field
 
 
-class Event(pa.DataFrameModel):
+class Event(BaseModel):
     date: str
-    st: str = pa.Field(description="Start Time")
-    et: str = pa.Field(description="End Time")
+    st: str = Field(description="Start Time")
+    et: str = Field(description="End Time")
     venue: str
     module: str
     session: str
@@ -14,27 +12,24 @@ class Event(pa.DataFrameModel):
     staff: str
     groupid: str
 
+    def get_event_categories(self) -> list[str] | None:
+        event_id: str = self.groupid
+        if not event_id:
+            return None
+        return [event_id]
 
-def get_event_categories(event: sqlite3.Row) -> list[str] | None:
-    event_id: str = event[Event.groupid]
-    if not event_id:
-        return None
-    return [event_id]
+    def get_event_description(self) -> str:
+        title = self.get_event_title()
 
+        if self.staff:
+            description = f"{title} Staff: {self.staff}"
+        else:
+            description = title
 
-def get_event_description(event: sqlite3.Row) -> str:
-    title = get_event_title()
+        return description
 
-    if event[Event.staff]:
-        description = f"{title} Staff: {event[Event.staff]}"
-    else:
-        description = title
-
-    return description
-
-
-def get_event_title(event: sqlite3.Row) -> str:
-    if event[Event.title]:
-        return event[Event.title]
-    else:
-        return f"{event[Event.session]}({event[Event.module]})"
+    def get_event_title(self) -> str:
+        if self.title:
+            return self.title
+        else:
+            return f"{self.session}({self.module})"

@@ -1,13 +1,11 @@
-import sqlite3
-
 from uoa_med_personal_timetable.main import Event, Person
 
 
-def this_event_is_for_this_person(*, event: sqlite3.Row, person: sqlite3.Row) -> bool:
-    event_id: str = event[Event.groupid]
-    personal_sga = (person[Person.sga],)
-    personal_hal = (person[Person.hal],)
-    personal_comlab = (person[Person.comlab],)
+def this_event_is_for_this_person(*, event: Event, person: Person) -> bool:
+    event_id: str = event.groupid
+    personal_sga = person.sga
+    personal_hal = person.hal
+    personal_comlab = person.comlab
 
     if not event_id:
         # TODO I don't know why an event wouldn't have an EventID

@@ -5,15 +5,10 @@ from ics import Calendar
 from ics import Event as ICSEvent
 
 from uoa_med_personal_timetable.date import fixdate
-from uoa_med_personal_timetable.event import (
-    Event,
-    get_event_categories,
-    get_event_description,
-    get_event_title,
-)
+from uoa_med_personal_timetable.event import Event
 from uoa_med_personal_timetable.html_ import footer, header
 from uoa_med_personal_timetable.parse import this_event_is_for_this_person
-from uoa_med_personal_timetable.person import Person, get_full_name, get_surname_initial
+from uoa_med_personal_timetable.person import Person
 
 
 def main(*, output_dir: Path, timetable_sqlite_path: Path):
@@ -21,12 +16,18 @@ def main(*, output_dir: Path, timetable_sqlite_path: Path):
     cnxn.row_factory = sqlite3.Row
     c = cnxn.cursor()
 
-    people = c.execute("select * from people").fetchall()
-    people = sorted(people, key=get_surname_initial)
+    people = [
+        Person.model_validate(row)
+        for row in c.execute("select * from people").fetchall()
+    ]
+    people = sorted(people, key=Person.get_surname_initial)
 
     # N.B. this needs to be extracted from a single unified iCal file, which populates
     # this SQLite table.
-    events = c.execute("select * from tt order by rowid").fetchall()
+    events = [
+        Event.model_validate(row)
+        for row in c.execute("select * from tt order by rowid").fetchall()
+    ]
 
     create_ical_files(output_dir, people=people, events=events)
     create_csv_files(output_dir, people=people, events=events)
@@ -44,21 +45,21 @@ def create_ical_files(
     output_dir: Path, *, people: list[Person], events: list[Event]
 ) -> None:
     for idx, person in enumerate(people, start=1):
-        events: list[ICSEvent] = []
+        ics_events: list[ICSEvent] = []
         for event in events:
             if this_event_is_for_this_person(event=event, person=person):
-                event = ICSEvent(
-                    begin=fixdate(f"{event[Event.date]} {event[Event.st]}"),
-                    end=fixdate(f"{event[Event.date]} {event[Event.et]}"),
-                    location=event[Event.venue],
-                    categories=get_event_categories(event),
-                    name=get_event_title(event),
+                ics_event = ICSEvent(
+                    begin=fixdate(f"{event.date} {event.st}"),
+                    end=fixdate(f"{event.date} {event.et}"),
+                    location=event.venue,
+                    categories=event.get_event_categories(),
+                    name=event.get_event_title(),
+                    description=event.get_event_description(),
                 )
 
-                event.description = get_event_description(event)
-                events.append(event)
+                ics_events.append(ics_event)
 
-        calendar = Calendar(events=events)
+        calendar = Calendar(events=ics_events)
         save_cal(calendar=calendar, filename=output_dir / f"{idx}.ics")
 
 
@@ -66,18 +67,18 @@ def create_csv_files(output_dir: Path, *, people: list[Person], events: list[Eve
     for idx, person in enumerate(people, start=1):
         csv_str = "Date,Start Time,End Time,Venue,Module,Session,Title,Staff,Group\r\n"
         for event in events:
-            event_id = event[Event.groupid]
+            event_id = event.groupid
             if this_event_is_for_this_person(event_id=event_id, person=person):
-                csv_str += f'{event[Event.date]},{event[Event.st]},{event[Event.et]},"{event[Event.venue]}","{event[Event.module]}",{event[Event.session]},"{event[Event.title]}","{event[Event.staff]}",{event[Event.groupid]}\r\n'
+                csv_str += f"{event.date},{event.st},{event.et},{event.venue},{event.module},{event.session},{event.title},{event.staff},{event.groupid}\r\n"
 
         save_csv_str(csv_str=csv_str, filename=output_dir / f"{idx}.csv")
 
 
-def get_html_body(people: list[sqlite3.Row]) -> str:
+def get_html_body(people: list[Person]) -> str:
     recorded_initials = set()
     body = "<br>"
     for idx, person in enumerate(people, start=1):
-        lastname_initial = get_surname_initial(person)
+        lastname_initial = person.get_surname_initial()
 
         first_initial_instance = lastname_initial not in recorded_initials
         if first_initial_instance:
@@ -89,20 +90,20 @@ def get_html_body(people: list[sqlite3.Row]) -> str:
 
 
 def get_person_html_body(
-    person: sqlite3.Row, *, stem: str, first_initial_instance: bool = False
+    person: Person, *, stem: str, first_initial_instance: bool = False
 ) -> str:
     # This is the HTML corresponding to this person
     person_body = ""
     if first_initial_instance:
-        person_body += f"<a name={get_surname_initial(person)}> </a>"
+        person_body += f"<a name={person.get_surname_initial}> </a>"
     person_body += "<br>"
-    person_body += get_full_name(person)
+    person_body += person.get_full_name()
     person_body += f"<a href={stem}.ics>iCal</a> | <a href={stem}.csv>CSV</a>"
 
 
-def get_surname_initial_hyperlink_str(people: list[sqlite3.Row]) -> str:
+def get_surname_initial_hyperlink_str(people: list[Person]) -> str:
     surname_initials = sorted(
-        {get_surname_initial(person): person for person in people}
+        {person.get_surname_initial(): person for person in people}
     )
     surname_initial_hyperlinks = [
         f"<a href=#{initial}>{initial}</a>" for initial in surname_initials

@@ -43,7 +43,7 @@ timetable_csv_by_csv_name = {
 }
 
 # Change this to re-run on different datasets
-CSV_NAME = r"2025Y3 Sem1 grps (auid).csv"
+CSV_NAME = r"2025 Yr 2 Canvas grps 20250218B KS.csv"
 
 
 person_df = (
@@ -100,7 +100,10 @@ def is_group_match(group_id: str, group_str: str) -> bool:
     (group_id_num,) = group_id_nums
 
     group_str_category, group_str_id_nums = parse_group_id(group_str)
-    return group_category == group_str_category and group_id_num in group_str_id_nums
+    return (
+        (group_category.upper() == group_str_category.upper())
+        or (group_category == "CL" and group_str_category == "Nutrition")
+    ) and (group_id_num.upper() in [i.upper() for i in group_str_id_nums])
 
 
 def parse_group_id(group_id: str) -> tuple[str, list[str]]:
@@ -111,7 +114,11 @@ def parse_group_id(group_id: str) -> tuple[str, list[str]]:
     categories = []
     all_id_nums = []
     for subgroup_id in subgroup_ids:
-        category, id_nums = parse_one_group_id(group_id=subgroup_id.strip())
+        try:
+            category, id_nums = parse_one_group_id(group_id=subgroup_id.strip())
+        except ParseError:
+            msg = f"Group id {group_id} is malformed"
+            raise ParseError(msg)
         categories.append(category)
         all_id_nums.extend(id_nums)
 
@@ -126,9 +133,11 @@ def parse_group_id(group_id: str) -> tuple[str, list[str]]:
 def parse_one_group_id(group_id: str) -> tuple[str, list[str]]:
     if " " in group_id:
         try:
-            category, id_num = group_id.replace(" - ", "-").split(" ")
-        except ValueError:
-            msg = f"Group id {group_id} is malformed"
+            category, id_num = (
+                group_id.replace(" - ", "-").removesuffix("y, z").strip().split(" ")
+            )
+        except ValueError as err:
+            msg = f"Group id {group_id} is malformed: {err}"
             raise ParseError(msg)
         return category, parse_id_num(id_num)
     else:
@@ -145,8 +154,20 @@ def parse_one_group_id(group_id: str) -> tuple[str, list[str]]:
 def parse_id_num(id_num: str) -> list[str]:
     if "-" in id_num:
         start, end = id_num.split("-")
-        ints = list(range(int(start), int(end) + 1))
-        return [str(i) for i in ints]
+        if start.isdigit() and end.isdigit():
+            ints = list(range(int(start), int(end) + 1))
+            end_letter = ""
+        else:
+            start_digit = "".join(filter(str.isdigit, start))
+            end_digit = "".join(filter(str.isdigit, end))
+            start_letter = start.removeprefix(start_digit)
+            end_letter = end.removeprefix(end_digit)
+            if start_letter != end_letter:
+                msg = f"Group id {id_num} is malformed"
+                raise ParseError(msg)
+            ints = list(range(int(start_digit), int(end_digit) + 1))
+
+        return [str(i) + end_letter for i in ints]
     else:
         return [id_num]
 
@@ -222,5 +243,5 @@ for uaid in tqdm(uaids):
     calendar = Calendar(events=ics_events)
 
     filename = dump_dir_by_csv_name[CSV_NAME] / f"auid{row['AUID']}.ics"
-    with open(filename, mode="w") as my_file:
+    with open(filename, mode="w", encoding="UTF8") as my_file:
         my_file.writelines(calendar.serialize_iter())

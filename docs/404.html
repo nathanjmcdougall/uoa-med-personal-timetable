@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendar Not Found</title>
+    <title>Page Not Found</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -32,32 +32,48 @@
             color: #80bfff;
             font-weight: bold;
             text-decoration: none;
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
         }
 
         a:hover {
-            text-decoration: underline;
-        }
-
-        button {
-            margin-top: 20px;
-            padding: 10px 15px;
-            font-size: 16px;
-            border-radius: 5px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
+            background-color: #0056b3;
         }
     </style>
 </head>
 
 <body>
-    <h1>😭 Calendar Not Found</h1>
-    <p>It looks like the calendar page you’re trying to access doesn’t exist.</p>
-    <p>✅ Please check that you entered your UoA ID correctly.</p>
-    <p>🔄 Try going back and re-entering your ID.</p>
+    <h1 id="error-title">📄 404 Page Not Found</h1>
+    <p id="error-message">The page you are looking for does not exist.</p>
+
     <a href="index.html">🔙 Go Back to Calendar Selection</a>
-    <p>If you believe this is an error, please <a href="mailto:nathanjmcdougall@gmail.com">contact support</a>.</p>
+    <p>If you believe this is an error, please <a href="mailto:nathanjmcdougall@gmail.com">report an issue</a>.</p>
+
+    <script>
+        // Get the current URL path
+        const path = window.location.pathname;
+        const errorTitle = document.getElementById("error-title");
+        const errorMessage = document.getElementById("error-message");
+
+        // Regex to extract UA ID from missing .ics file
+        const match = path.match(/auid(\\d{8,10})\\.ics$/);
+
+        if (match) {
+            const uaid = match[1]; // Extracted UA ID
+
+            errorTitle.textContent = "😭 Calendar Not Found";
+            errorMessage.innerHTML = `
+                It looks like the calendar for <strong>UA ID: ${uaid}</strong> is missing. <br>
+                ✅ Please check that you entered your UA ID correctly. <br>
+                🔄 Try going back and re-entering your ID.
+                Otherwise, please <a href="mailto:nathanjmcdougall@gmail.com">report an issue</a>.
+            `;
+        }
+    </script>
 </body>
 
 </html>

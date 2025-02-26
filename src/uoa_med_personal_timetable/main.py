@@ -1,5 +1,6 @@
 import sqlite3
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from ics import Calendar
 from ics import Event as ICSEvent
@@ -183,9 +184,10 @@ def get_surname_initial_hyperlink_str(people: list[Person]) -> str:
 
 def save_cal(*, calendar: Calendar, filename: Path) -> None:
     lines = calendar.serialize_iter()
+
     with open(filename, mode="w") as my_file:
         for line in lines:
-            my_file.writelines(line.replace("00Z", "00"))
+            my_file.writelines(line.replace("00Z", "00"))  # Timezone fix
 
 
 def save_csv_str(*, csv_str: str, filename: Path) -> None:
@@ -194,7 +196,41 @@ def save_csv_str(*, csv_str: str, filename: Path) -> None:
 
 
 if __name__ == "__main__":
-    main(
-        output_dir=Path.cwd() / ".output",
-        timetable_sqlite_path="tt.db",
-    )
+    data_dir = Path.cwd() / ".data"
+    third_year_csv_path = Path(".output\MBCHB_3_timetable_250226.csv")
+
+    # Open the CSV and write to a Temporary SQLite database
+    with TemporaryDirectory() as tmp_path:
+        db_path = Path(tmp_path) / "timetable.db"
+        cnxn = sqlite3.connect(db_path)
+        cnxn.row_factory = sqlite3.Row
+        c = cnxn.cursor()
+        c.execute(
+            """
+            CREATE TABLE tt (
+                groupid TEXT,
+                date TEXT,
+                st TEXT,
+                et TEXT,
+                venue TEXT,
+                module TEXT,
+                session TEXT,
+                title TEXT,
+                staff TEXT
+            )
+            """
+        )
+        for row in third_year_csv_path.read_text().splitlines():
+            c.execute(
+                """
+                INSERT INTO tt (groupid, date, st, et, venue, module, session, title, staff)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                row.split(","),
+            )
+        cnxn.commit()
+
+        main(
+            output_dir=data_dir,
+            timetable_sqlite_path="timetable.db",
+        )

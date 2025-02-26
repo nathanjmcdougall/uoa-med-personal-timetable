@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 UoA Personal Med Calendars</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            padding: 20px;
+            background-color: #333;
+            color: #f4f4f4;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .light-mode {
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        h1 {
+            color: inherit;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+        }
+
+        a {
+            text-decoration: none;
+            color: #80bfff;
+            font-weight: bold;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #888;
+            font-size: 14px;
+            text-align: center;
+            color: inherit;
+        }
+
+        .light-mode a {
+            color: #007bff;
+        }
+
+        .light-mode footer {
+            border-top: 1px solid #ccc;
+        }
+
+        .toggle-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            background-color: #555;
+            color: white;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body class="dark-mode">
+    <button class="toggle-button" onclick="toggleDarkMode()">Toggle Light Mode</button>
+    <h1>📅 UoA Personal Med Calendars</h1>
+    <p>Select a semester and year:</p>
+    <ul>
+        <li><a href="2025/sem1/y3/index.html">Year 3 - 2025 Semester 1</a></li>
+    </ul>
+    <footer>
+        <p>For feedback, contact <a href="mailto:nathanjmcdougall@gmail.com">nathanjmcdougall@gmail.com</a></p>
+    </footer>
+    <script>
+        function toggleDarkMode() {
+            document.body.classList.toggle('light-mode');
+            document.body.classList.contains('light-mode')
+                ? document.querySelector('.toggle-button').textContent = 'Toggle Dark Mode'
+                : document.querySelector('.toggle-button').textContent = 'Toggle Light Mode';
+        }
+    </script>
+</body>
+
+</html>

@@ -20,11 +20,19 @@ classifiers = [
 ]
 dependencies = [
   "ics>=0.7.2",
+  "polars>=1.23.0",
   "pydantic>=2.10.6",
+  "tqdm>=4.67.1",
 ]
 
 [dependency-groups]
-dev = [ "deptry>=0.23.0", "pre-commit>=4.1.0", "ruff>=0.9.7" ]
+dev = [
+  "deptry>=0.23.0",
+  "ipykernel>=6.29.5",
+  "ipython>=8.32.0",
+  "pre-commit>=4.1.0",
+  "ruff>=0.9.7",
+]
 test = [
   "coverage[toml]>=7.6.12",
   "pytest>=8.3.4",
@@ -56,9 +64,6 @@ lint.select = [
   "UP",
 ]
 lint.ignore = [ "PLR2004", "SIM108" ]
-
-[tool.codespell]
-ignore-regex = [ "[A-Za-z0-9+/]{100,}" ]
 
 [tool.pyproject-fmt]
 keep_full_version = true

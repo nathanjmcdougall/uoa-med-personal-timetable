@@ -54,19 +54,18 @@
     <p>If you believe this is an error, please <a href="mailto:nathanjmcdougall@gmail.com">report an issue</a>.</p>
 
     <script>
-        // Get the current URL path
-        const path = window.location.pathname;
-        const errorTitle = document.getElementById("error-title");
-        const errorMessage = document.getElementById("error-message");
+        // Get the last part of the URL (filename)
+        const pathSegments = window.location.pathname.split('/');
+        const filename = pathSegments[pathSegments.length - 1]; // Last segment of the path
 
         // Regex to extract UA ID from missing .ics file
-        const match = path.match(/auid(\\d{8,10})\\.ics$/);
+        const match = filename.match(/^auid(\d{8,10})\.ics$/);
 
         if (match) {
             const uaid = match[1]; // Extracted UA ID
 
-            errorTitle.textContent = "😭 Calendar Not Found";
-            errorMessage.innerHTML = `
+            document.getElementById("error-title").textContent = "😭 Calendar Not Found";
+            document.getElementById("error-message").innerHTML = `
                 It looks like the calendar for <strong>UA ID: ${uaid}</strong> is missing. <br>
                 ✅ Please check that you entered your UA ID correctly. <br>
                 🔄 Try going back and re-entering your ID.

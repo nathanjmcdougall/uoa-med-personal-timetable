@@ -10,24 +10,53 @@ from tqdm import tqdm
 
 data_dir = Path(__file__).parent.parent.parent / ".data"
 
+schema_by_csv_name = {
+    r"2025Y3 Sem1 grps (auid).csv": {
+        "AUID": polars.Utf8,
+        "HAL": polars.Utf8,
+        "CS": polars.Utf8,
+        "BLS": polars.Utf8,
+        "MH Option": polars.Utf8,
+        "VExam Lab": polars.Utf8,
+    },
+    r"2025 Yr 2 Canvas grps 20250218B KS.csv": {
+        "AUID": polars.Utf8,
+        "SGA Groups": polars.Utf8,
+        "Workshop HAL": polars.Utf8,
+        "Nutrition Lab": polars.Utf8,
+    },
+}
+
+output_dir = Path(__file__).parent.parent.parent / "docs"
+dump_dir_by_csv_name = {
+    r"2025Y3 Sem1 grps (auid).csv": output_dir / "2025" / "sem1" / "y3",
+    r"2025 Yr 2 Canvas grps 20250218B KS.csv": output_dir / "2025" / "sem1" / "y2",
+}
+
+end_of_semester_date_by_csv_name = {
+    r"2025Y3 Sem1 grps (auid).csv": pl.date(2025, 6, 24),
+    r"2025 Yr 2 Canvas grps 20250218B KS.csv": pl.date(2025, 6, 25),
+}
+timetable_csv_by_csv_name = {
+    r"2025Y3 Sem1 grps (auid).csv": r"MBCHB_3_timetable_250226.csv",
+    r"2025 Yr 2 Canvas grps 20250218B KS.csv": r"MBCHB_2_timetable_250226.csv",
+}
+
+# Change this to re-run on different datasets
+CSV_NAME = r"2025Y3 Sem1 grps (auid).csv"
+
+
 person_df = (
     polars.read_csv(
-        data_dir / r"2025Y3 Sem1 grps (auid).csv",
-        schema={
-            "AUID": polars.Utf8,
-            "HAL": polars.Utf8,
-            "CS": polars.Utf8,
-            "BLS": polars.Utf8,
-            "MH Option": polars.Utf8,
-            "VExam Lab": polars.Utf8,
-        },
+        data_dir / CSV_NAME,
+        schema=schema_by_csv_name[CSV_NAME],
     )
     .unpivot(index="AUID", value_name="Group ID")
     .drop_nulls(subset=["Group ID"])
 )
 
 event_df = polars.read_csv(
-    data_dir / r"MBCHB_3_timetable_250226.csv",
+    data_dir / timetable_csv_by_csv_name[CSV_NAME],
     schema={
         "Date": polars.Utf8,  # e.g. 03 Mar 2025
         "Start Time": polars.Utf8,  # e.g. 9:00 AM
@@ -51,7 +80,7 @@ event_df = event_df.with_columns(
 )
 
 # Filter events to Semester 1 2025: up to 24th June 2025
-event_df = event_df.filter(pl.col("Date") <= pl.date(2025, 6, 24))
+event_df = event_df.filter(pl.col("Date") <= end_of_semester_date_by_csv_name[CSV_NAME])
 
 
 class ParseError(Exception):
@@ -74,7 +103,7 @@ def is_group_match(group_id: str, group_str: str) -> bool:
     return group_category == group_str_category and group_id_num in group_str_id_nums
 
 
-def parse_group_id(group_id: str) -> tuple[str, list[int]]:
+def parse_group_id(group_id: str) -> tuple[str, list[str]]:
     # Handle a complicated case like
     # MH 5 & MH 10 & MH 12 - 13 & MH 16 - 17
 
@@ -94,7 +123,7 @@ def parse_group_id(group_id: str) -> tuple[str, list[int]]:
     return category, all_id_nums
 
 
-def parse_one_group_id(group_id: str) -> tuple[str, list[int]]:
+def parse_one_group_id(group_id: str) -> tuple[str, list[str]]:
     if " " in group_id:
         try:
             category, id_num = group_id.replace(" - ", "-").split(" ")
@@ -113,12 +142,13 @@ def parse_one_group_id(group_id: str) -> tuple[str, list[int]]:
         return category, parse_id_num(id_num)
 
 
-def parse_id_num(id_num: str) -> list[int]:
+def parse_id_num(id_num: str) -> list[str]:
     if "-" in id_num:
         start, end = id_num.split("-")
-        return list(range(int(start), int(end) + 1))
+        ints = list(range(int(start), int(end) + 1))
+        return [str(i) for i in ints]
     else:
-        return [int(id_num)]
+        return [id_num]
 
 
 # Find all combinations of groups matching with events
@@ -164,9 +194,11 @@ joined_df = joined_df.unique(subset=["Event ID", "AUID"])
 
 uaids = person_df["AUID"].unique().to_list()
 
-output_dir = Path(__file__).parent.parent.parent / "docs"
 for uaid in tqdm(uaids):
-    someone_df = joined_df.filter(pl.col("AUID") == uaid)
+    someone_df = joined_df.filter(pl.col("AUID") == uaid).sort(
+        by=["Date", "Start Time"]
+    )
+
     ics_events: list[ICSEvent] = []
     for row in someone_df.iter_rows(named=True):
         ics_event = ICSEvent(
@@ -189,6 +221,6 @@ for uaid in tqdm(uaids):
 
     calendar = Calendar(events=ics_events)
 
-    filename = output_dir / "2025" / "sem1" / "y3" / f"auid{row['AUID']}.ics"
+    filename = dump_dir_by_csv_name[CSV_NAME] / f"auid{row['AUID']}.ics"
     with open(filename, mode="w") as my_file:
         my_file.writelines(calendar.serialize_iter())

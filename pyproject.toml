@@ -23,6 +23,7 @@ dependencies = [
   "polars>=1.23.0",
   "pydantic>=2.10.6",
   "tqdm>=4.67.1",
+  "tzdata>=2025.1",
 ]
 
 [dependency-groups]

@@ -1,9 +1,11 @@
 import datetime
 import re
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import polars
 import polars as pl
+import tzdata  # noqa: F401 needed for NZ Timezones
 from ics import Calendar
 from ics import Event as ICSEvent
 from tqdm import tqdm
@@ -223,8 +225,16 @@ for uaid in tqdm(uaids):
     ics_events: list[ICSEvent] = []
     for row in someone_df.iter_rows(named=True):
         ics_event = ICSEvent(
-            begin=datetime.datetime.combine(date=row["Date"], time=row["Start Time"]),
-            end=datetime.datetime.combine(date=row["Date"], time=row["End Time"]),
+            begin=datetime.datetime.combine(
+                date=row["Date"],
+                time=row["Start Time"],
+                tzinfo=ZoneInfo("Pacific/Auckland"),
+            ),
+            end=datetime.datetime.combine(
+                date=row["Date"],
+                time=row["End Time"],
+                tzinfo=ZoneInfo("Pacific/Auckland"),
+            ),
             location=row["Venue"],
             categories=["University", row["Group ID"]]
             if row["Group ID"]
@@ -244,4 +254,5 @@ for uaid in tqdm(uaids):
 
     filename = dump_dir_by_csv_name[CSV_NAME] / f"auid{row['AUID']}.ics"
     with open(filename, mode="w", encoding="UTF8") as my_file:
-        my_file.writelines(calendar.serialize_iter())
+        lines = calendar.serialize_iter()
+        my_file.writelines(lines)

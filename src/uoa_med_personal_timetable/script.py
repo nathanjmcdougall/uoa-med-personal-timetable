@@ -45,7 +45,7 @@ timetable_csv_by_csv_name = {
 }
 
 # Change this to re-run on different datasets
-CSV_NAME = r"2025 Yr 2 Canvas grps 20250218B KS.csv"
+CSV_NAME = r"2025Y3 Sem1 grps (auid).csv"
 
 
 person_df = (
@@ -239,8 +239,14 @@ for uaid in tqdm(uaids):
             categories=["University", row["Group ID"]]
             if row["Group ID"]
             else ["University"],
-            name=row["Title"] if row["Title"] else f"{row['Session']}({row['Module']})",
         )
+
+        if not row["Module"] or not row["Session"]:
+            raise NotImplementedError
+        ics_event.name = f"{row['Module']} {row['Session']}"
+        if row["Title"]:
+            ics_event.name += f": {row['Title']}"
+
         if row["Title"] and not row["Staff"]:
             ics_event.description = row["Title"]
         elif row["Staff"] and not row["Title"]:

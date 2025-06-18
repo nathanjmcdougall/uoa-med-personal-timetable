@@ -27,25 +27,49 @@ schema_by_csv_name = {
         "Workshop HAL": polars.Utf8,
         "Nutrition Lab": polars.Utf8,
     },
+    r"2025Y3S2 membership canvas 20250609.csv": {
+        "AUID": polars.Utf8,
+        "Allo hosp": polars.Utf8,
+        "Hospital Time Group": polars.Utf8,
+        "SGA": polars.Utf8,
+        "CS": polars.Utf8,
+        "IV": polars.Utf8,
+        "HAL": polars.Utf8,
+        "BLS": polars.Utf8,
+        "MH Option": polars.Utf8,
+        "VExam Lab": polars.Utf8,
+    },
 }
 
 output_dir = Path(__file__).parent.parent.parent / "docs"
 dump_dir_by_csv_name = {
     r"2025Y3 Sem1 grps (auid).csv": output_dir / "2025" / "sem1" / "y3",
     r"2025 Yr 2 Canvas grps 20250218B KS.csv": output_dir / "2025" / "sem1" / "y2",
+    r"2025Y3S2 membership canvas 20250609.csv": output_dir / "2025" / "sem2" / "y3",
 }
-
+start_of_semester_date_by_csv_name = {
+    r"2025Y3 Sem1 grps (auid).csv": pl.date(2025, 1, 1),
+    r"2025 Yr 2 Canvas grps 20250218B KS.csv": pl.date(2025, 1, 1),
+    r"2025Y3S2 membership canvas 20250609.csv": pl.date(2025, 6, 26),
+}
 end_of_semester_date_by_csv_name = {
     r"2025Y3 Sem1 grps (auid).csv": pl.date(2025, 6, 24),
     r"2025 Yr 2 Canvas grps 20250218B KS.csv": pl.date(2025, 6, 25),
+    r"2025Y3S2 membership canvas 20250609.csv": pl.date(2025, 11, 13),
 }
 timetable_csv_by_csv_name = {
     r"2025Y3 Sem1 grps (auid).csv": r"MBCHB_3_timetable_250226.csv",
     r"2025 Yr 2 Canvas grps 20250218B KS.csv": r"MBCHB_2_timetable_250226.csv",
+    r"2025Y3S2 membership canvas 20250609.csv": r"MBCHB_3_timetable_250618.csv",
+}
+date_format_by_csv_name = {
+    r"2025Y3 Sem1 grps (auid).csv": "%d %b %Y",  # e.g. 03 Mar 2025
+    r"2025 Yr 2 Canvas grps 20250218B KS.csv": "%d %b %Y",  # e.g. 03 Mar 2025
+    r"2025Y3S2 membership canvas 20250609.csv": "%d-%b-%y",  # e.g. 3-Mar-25
 }
 
 # Change this to re-run on different datasets
-CSV_NAME = r"2025Y3 Sem1 grps (auid).csv"
+CSV_NAME = r"2025Y3S2 membership canvas 20250609.csv"
 
 
 person_df = (
@@ -53,6 +77,7 @@ person_df = (
         data_dir / CSV_NAME,
         schema=schema_by_csv_name[CSV_NAME],
     )
+    .drop("Allo hosp", strict=False)  # The allocated hospital is obvious to students
     .unpivot(index="AUID", value_name="Group ID")
     .drop_nulls(subset=["Group ID"])
 )
@@ -75,14 +100,19 @@ event_df = polars.read_csv(
 # Parse Date and Time columns
 event_df = event_df.with_columns(
     [
-        pl.col("Date").str.strptime(pl.Date, "%d %b %Y"),
+        pl.col("Date").str.strptime(pl.Date, date_format_by_csv_name[CSV_NAME]),
         pl.col("Start Time").str.strptime(pl.Time, "%I:%M %p"),
         pl.col("End Time").str.strptime(pl.Time, "%I:%M %p"),
     ]
 )
 
-# Filter events to Semester 1 2025: up to 24th June 2025
-event_df = event_df.filter(pl.col("Date") <= end_of_semester_date_by_csv_name[CSV_NAME])
+# Filter events to the correct semester
+event_df = event_df.filter(
+    pl.col("Date").is_between(
+        start_of_semester_date_by_csv_name[CSV_NAME],
+        end_of_semester_date_by_csv_name[CSV_NAME],
+    )
+)
 
 
 class ParseError(Exception):
@@ -134,13 +164,19 @@ def parse_group_id(group_id: str) -> tuple[str, list[str]]:
 
 def parse_one_group_id(group_id: str) -> tuple[str, list[str]]:
     if " " in group_id:
+        group_id = group_id.replace("  ", " ")
         try:
             category, id_num = (
                 group_id.replace(" - ", "-").removesuffix("y, z").strip().split(" ")
             )
         except ValueError as err:
-            msg = f"Group id {group_id} is malformed: {err}"
-            raise ParseError(msg)
+            if group_id.startswith("Hospital "):
+                # e.g. Hospital 1, Hospital 2, etc.
+                category = "Hospital"
+                id_num = group_id.removeprefix("Hospital ").strip()
+            else:
+                msg = f"Group id {group_id} is malformed: {err}"
+                raise ParseError(msg)
         return category, parse_id_num(id_num)
     else:
         # e.g. BLS19

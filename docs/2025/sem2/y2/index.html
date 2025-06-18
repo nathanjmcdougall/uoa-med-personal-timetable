@@ -20,17 +20,9 @@
             color: #333;
         }
 
-        h1 {
+        h1,
+        h2 {
             color: inherit;
-        }
-
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        li {
-            margin: 10px 0;
         }
 
         a {
@@ -72,20 +64,41 @@
             font-size: 14px;
             border-radius: 5px;
         }
+
+        .input-container {
+            margin-top: 20px;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            margin-left: 10px;
+            border-radius: 5px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
     </style>
 </head>
 
 <body class="dark-mode">
     <button class="toggle-button" onclick="toggleDarkMode()">Toggle Light Mode</button>
     <h1>📅 UoA Personal Med Calendars</h1>
-    <p>Select a semester and cohort year:</p>
-    <ul>
-        <li><a href="2025/sem2/y3/index.html">Year 3 - 2025 Semester 2</a></li>
-        <li><a href="2025/sem2/y3/index.html">Year 2 - 2025 Semester 2</a></li>
-        <hr>
-        <li><a href="2025/sem1/y3/index.html">Year 3 - 2025 Semester 1</a></li>
-        <li><a href="2025/sem1/y2/index.html">Year 2 - 2025 Semester 1</a></li>
-    </ul>
+    <h2>Year 2 - 2025 Semester 2</h2>
+    <div class="input-container">
+        <label for="uaid">Enter your UoA ID: </label>
+        <input type="text" id="uaid" placeholder="e.g., 123456789">
+        <button onclick="generateLink()">📅 Get My Calendar</button>
+    </div>
+    <p id="calendar-link"></p>
     <footer>
         <p>For feedback, contact <a href="mailto:nathanjmcdougall@gmail.com">nathanjmcdougall@gmail.com</a></p>
     </footer>
@@ -95,6 +108,16 @@
             document.body.classList.contains('light-mode')
                 ? document.querySelector('.toggle-button').textContent = 'Toggle Dark Mode'
                 : document.querySelector('.toggle-button').textContent = 'Toggle Light Mode';
+        }
+
+        function generateLink() {
+            const uaid = document.getElementById('uaid').value.trim();
+            const linkContainer = document.getElementById('calendar-link');
+            if (uaid.match(/^\d{8,10}$/)) {
+                linkContainer.innerHTML = `✅ Your calendar: <a href='auid${uaid}.ics' target='_blank'>Click here to download 📅</a>`;
+            } else {
+                linkContainer.innerHTML = "❌ Please enter a valid UoA ID (8 to 10 digits).";
+            }
         }
     </script>
 </body>

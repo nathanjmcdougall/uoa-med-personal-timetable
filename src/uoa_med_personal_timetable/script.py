@@ -45,6 +45,12 @@ schema_by_csv_name = {
         "Workshop HAL": polars.Utf8,
         "Nutrition Lab": polars.Utf8,
     },
+    r"2026+Y2+membership+canvas+20260205+B+GC.csv": {
+        "AUID": polars.Utf8,
+        "SGA": polars.Utf8,
+        "HAL Table": polars.Utf8,
+        "Nutrition Lab": polars.Utf8,
+    },
 }
 
 output_dir = Path(__file__).parent.parent.parent / "docs"
@@ -56,34 +62,39 @@ dump_dir_by_csv_name = {
     / "2025"
     / "sem2"
     / "y2",
+    r"2026+Y2+membership+canvas+20260205+B+GC.csv": output_dir / "2026" / "sem1" / "y2",
 }
 start_of_semester_date_by_csv_name = {
     r"2025Y3 Sem1 grps (auid).csv": pl.date(2025, 1, 1),
     r"2025 Yr 2 Canvas grps 20250218B KS.csv": pl.date(2025, 1, 1),
     r"2025Y3S2 membership canvas 20250609.csv": pl.date(2025, 6, 26),
     r"2025 Yr 2 Sem 2 Canvas grps 20250218B KS.csv": pl.date(2025, 6, 26),
+    r"2026+Y2+membership+canvas+20260205+B+GC.csv": pl.date(2026, 1, 1),
 }
 end_of_semester_date_by_csv_name = {
     r"2025Y3 Sem1 grps (auid).csv": pl.date(2025, 6, 24),
     r"2025 Yr 2 Canvas grps 20250218B KS.csv": pl.date(2025, 6, 24),
     r"2025Y3S2 membership canvas 20250609.csv": pl.date(2025, 11, 13),
     r"2025 Yr 2 Sem 2 Canvas grps 20250218B KS.csv": pl.date(2025, 11, 13),
+    r"2026+Y2+membership+canvas+20260205+B+GC.csv": pl.date(2026, 6, 29),
 }
 timetable_csv_by_csv_name = {
     r"2025Y3 Sem1 grps (auid).csv": r"MBCHB_3_timetable_250226.csv",
     r"2025 Yr 2 Canvas grps 20250218B KS.csv": r"MBCHB_2_timetable_250226.csv",
     r"2025Y3S2 membership canvas 20250609.csv": r"MBCHB_3_timetable_250618.csv",
     r"2025 Yr 2 Sem 2 Canvas grps 20250218B KS.csv": r"MBCHB_2_timetable_250618.csv",
+    r"2026+Y2+membership+canvas+20260205+B+GC.csv": r"MBCHB_2_timetable_260210.csv",
 }
 date_format_by_csv_name = {
     r"2025Y3 Sem1 grps (auid).csv": "%d %b %Y",  # e.g. 03 Mar 2025
     r"2025 Yr 2 Canvas grps 20250218B KS.csv": "%d %b %Y",
     r"2025Y3S2 membership canvas 20250609.csv": "%d-%b-%y",  # e.g. 3-Mar-25
     r"2025 Yr 2 Sem 2 Canvas grps 20250218B KS.csv": "%d %b %Y",
+    r"2026+Y2+membership+canvas+20260205+B+GC.csv": "%d %b %Y",
 }
 
 # Change this to re-run on different datasets
-CSV_NAME = r"2025 Yr 2 Sem 2 Canvas grps 20250218B KS.csv"
+CSV_NAME = r"2026+Y2+membership+canvas+20260205+B+GC.csv"
 
 
 person_df = (

@@ -95,7 +95,7 @@
     <h2>Year 3 - 2025 Semester 1</h2>
     <div class="input-container">
         <label for="uaid">Enter your UoA ID: </label>
-        <input type="text" id="uaid" placeholder="e.g., 123456789">
+        <input type="text" id="uaid" placeholder="e.g., 1234567 or 123456789">
         <button onclick="generateLink()">📅 Get My Calendar</button>
     </div>
     <p id="calendar-link"></p>
@@ -113,10 +113,10 @@
         function generateLink() {
             const uaid = document.getElementById('uaid').value.trim();
             const linkContainer = document.getElementById('calendar-link');
-            if (uaid.match(/^\d{8,10}$/)) {
+            if (uaid.match(/^\d{7,10}$/)) {
                 linkContainer.innerHTML = `✅ Your calendar: <a href='auid${uaid}.ics' target='_blank'>Click here to download 📅</a>`;
             } else {
-                linkContainer.innerHTML = "❌ Please enter a valid UoA ID (8 to 10 digits).";
+                linkContainer.innerHTML = "❌ Please enter a valid UoA ID (7 to 10 digits).";
             }
         }
     </script>

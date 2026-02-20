@@ -59,7 +59,7 @@
         const filename = pathSegments[pathSegments.length - 1]; // Last segment of the path
 
         // Regex to extract UA ID from missing .ics file
-        const match = filename.match(/^auid(\d{8,10})\.ics$/);
+        const match = filename.match(/^auid(\d{7,10})\.ics$/);
 
         if (match) {
             const uaid = match[1]; // Extracted UA ID

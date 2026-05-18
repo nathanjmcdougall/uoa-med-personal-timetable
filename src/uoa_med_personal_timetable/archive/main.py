@@ -5,10 +5,10 @@ from tempfile import TemporaryDirectory
 from ics import Calendar
 from ics import Event as ICSEvent
 
-from uoa_med_personal_timetable.date import fixdate
-from uoa_med_personal_timetable.event import Event
-from uoa_med_personal_timetable.html_ import footer, header
-from uoa_med_personal_timetable.person import Person
+from uoa_med_personal_timetable.archive.date import fixdate
+from uoa_med_personal_timetable.archive.event import Event
+from uoa_med_personal_timetable.archive.html_ import footer, header
+from uoa_med_personal_timetable.archive.person import Person
 
 
 def main(*, output_dir: Path, timetable_sqlite_path: Path):

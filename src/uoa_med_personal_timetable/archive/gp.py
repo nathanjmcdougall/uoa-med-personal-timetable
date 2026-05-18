@@ -2,7 +2,7 @@ import sqlite3
 
 from ics import Event
 
-from uoa_med_personal_timetable.date import fixdate2
+from uoa_med_personal_timetable.archive.date import fixdate2
 
 
 def get_gp_visit(name, c: sqlite3.Cursor):

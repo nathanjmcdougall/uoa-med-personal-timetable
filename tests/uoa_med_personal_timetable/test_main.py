@@ -3,9 +3,9 @@ from pathlib import Path
 
 import ics
 
-from uoa_med_personal_timetable.event import Event
-from uoa_med_personal_timetable.main import main, this_event_is_for_this_person
-from uoa_med_personal_timetable.person import Person
+from uoa_med_personal_timetable.archive.event import Event
+from uoa_med_personal_timetable.archive.main import main, this_event_is_for_this_person
+from uoa_med_personal_timetable.archive.person import Person
 
 
 class TestMain:
